@@ -23,6 +23,10 @@ A wireless RC car controlled via **Bluetooth Low Energy (BLE)** using an **ESP32
 - **Real-time state management** for precise motor control
 - **Auto-reconnect capability** with connection status indicators
 
+## Live Demo
+
+https://github.com/user-attachments/assets/5cb8ccab-3781-4947-a2a9-6c4b1358794e
+
 ## Project captures:
 ![WhatsApp Image 2025-11-03 at 23 24 21](https://github.com/user-attachments/assets/b80c65cc-b2dd-4c7e-9216-ad892fb2162d)
 
@@ -31,11 +35,6 @@ A wireless RC car controlled via **Bluetooth Low Energy (BLE)** using an **ESP32
 ![WhatsApp Image 2025-11-03 at 23 24 20](https://github.com/user-attachments/assets/38668fbd-8a67-4ae7-a3ef-f92fdfde657d)
 
 ![WhatsApp Image 2025-11-03 at 23 24 20 (1)](https://github.com/user-attachments/assets/7f974a31-2f7e-44ed-bb0c-c8faaf62ce54)
-
-
-## Live Demo
-
-[Add your demo video/GIF here]
 
 ## 🛠️ Technologies Used
 
