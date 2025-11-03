@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RC Car Remote</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background: #0a0a0a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Orientation Warning */
+        #orientation-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #0a0a0a;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #orientation-warning.show {
+            display: flex;
+        }
+
+        .rotate-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: rotate 2s ease-in-out infinite;
+        }
+
+        @keyframes rotate {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+
+        #orientation-warning h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #orientation-warning p {
+            font-size: 16px;
+            color: #888;
+        }
+
+        /* Main App */
+        #app {
+            display: none;
+            height: 90vh;
+            flex-direction: column;
+        }
+
+        #app.show {
+            display: flex;
+        }
+
+        /* Header */
+        .header {
+            padding: 12px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            background: #111;
+            border-bottom: 1px solid #222;
+        }
+
+        #connect-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #connect-btn:active {
+            transform: scale(0.95);
+        }
+
+        #connect-btn.connected {
+            background: #ef4444;
+        }
+
+        #status {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            border: 1px solid #333;
+            color: #888;
+            background: #1a1a1a;
+        }
+
+        #status.connected {
+            color: #10b981;
+            border-color: #10b981;
+        }
+
+        /* Controls Container */
+        .controls {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 20px;
+            gap: 40px;
+        }
+
+        /* Control Section */
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-label {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Button Styles */
+        .control-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .control-button:active {
+            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+            box-shadow: 
+                0 2px 8px rgba(0,0,0,0.5),
+                inset 0 2px 8px rgba(0,0,0,0.5);
+            transform: scale(0.95);
+        }
+
+        .control-button.active {
+            background: linear-gradient(145deg, #3b82f6, #2563eb);
+            box-shadow: 
+                0 0 20px rgba(59, 130, 246, 0.5),
+                0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        .control-button svg {
+            width: 40px;
+            height: 40px;
+            fill: #666;
+            transition: fill 0.2s;
+        }
+
+        .control-button.active svg {
+            fill: white;
+        }
+
+        /* Horizontal Layout */
+        .horizontal-controls {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        /* Vertical Layout */
+        .vertical-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .center-indicator {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            border: 2px solid #333;
+        }
+
+        /* Debug Info */
+        #debug {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: #666;
+            font-size: 12px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <!-- Orientation Warning -->
+    <div id="orientation-warning">
+        <div class="rotate-icon">📱</div>
+        <h2>Please Rotate Your Device</h2>
+        <p>This app works best in landscape mode</p>
+    </div>
+
+    <!-- Main App -->
+    <div id="app">
+        <div class="header">
+            <button id="connect-btn">CONNECT</button>
+            <div id="status">Disconnected</div>
+        </div>
+
+        <div class="controls">
+            <!-- Steering Controls -->
+            <div class="control-section">
+                <div class="horizontal-controls">
+                    <button class="control-button" id="left-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        </svg>
+                    </button>
+                    <div class="center-indicator"></div>
+                    <button class="control-button" id="right-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="control-label">Steering</div>
+            </div>
+
+            <!-- Drive Controls -->
+            <div class="control-section">
+                <div class="vertical-controls">
+                    <button class="control-button" id="forward-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+                        </svg>
+                    </button>
+                    <div class="center-indicator"></div>
+                    <button class="control-button" id="reverse-btn">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="control-label">Drive</div>
+            </div>
+        </div>
+
+        <div id="debug"></div>
+    </div>
+
+    <script>
+        // Constants
+        const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        const CHAR_UUID_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+        const STOP_INTERVAL = 200; // Send stop every 200ms when no input
+
+        // State
+        let bleDevice = null;
+        let bleCharacteristic = null;
+        let driveState = 'stop';
+        let steerState = 'center';
+        let stopInterval = null;
+
+        // Elements
+        const orientationWarning = document.getElementById('orientation-warning');
+        const app = document.getElementById('app');
+        const connectBtn = document.getElementById('connect-btn');
+        const status = document.getElementById('status');
+        const forwardBtn = document.getElementById('forward-btn');
+        const reverseBtn = document.getElementById('reverse-btn');
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+        const debug = document.getElementById('debug');
+
+        // Check orientation
+        function checkOrientation() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            if (isLandscape) {
+                orientationWarning.classList.remove('show');
+                app.classList.add('show');
+            } else {
+                orientationWarning.classList.add('show');
+                app.classList.remove('show');
+            }
+        }
+
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        checkOrientation();
+
+        // BLE Functions
+        async function connectBLE() {
+            try {
+                status.textContent = 'Connecting...';
+                
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32_RC_CAR' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                bleCharacteristic = await service.getCharacteristic(CHAR_UUID_RX);
+
+                status.textContent = 'Connected';
+                status.classList.add('connected');
+                connectBtn.textContent = 'DISCONNECT';
+                connectBtn.classList.add('connected');
+
+                startStopInterval();
+                updateDebug('Connected to ESP32_RC_CAR');
+            } catch (error) {
+                console.error('Connection failed:', error);
+                status.textContent = 'Connection Failed';
+                updateDebug('Error: ' + error.message);
+            }
+        }
+
+        function disconnectBLE() {
+            if (bleDevice && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+            }
+        }
+
+        function onDisconnected() {
+            status.textContent = 'Disconnected';
+            status.classList.remove('connected');
+            connectBtn.textContent = 'CONNECT';
+            connectBtn.classList.remove('connected');
+            bleCharacteristic = null;
+            stopStopInterval();
+            updateDebug('Disconnected');
+        }
+
+        async function sendCommand(cmd) {
+            if (bleCharacteristic) {
+                try {
+                    const encoder = new TextEncoder();
+                    await bleCharacteristic.writeValue(encoder.encode(cmd));
+                    updateDebug(`Sent: ${cmd}`);
+                } catch (error) {
+                    console.error('Send failed:', error);
+                    updateDebug('Send error: ' + error.message);
+                }
+            }
+        }
+
+        // Stop interval management
+        function startStopInterval() {
+            stopStopInterval();
+            stopInterval = setInterval(() => {
+                if (driveState === 'stop' && steerState === 'center') {
+                    sendCommand('stop');
+                }
+            }, STOP_INTERVAL);
+        }
+
+        function stopStopInterval() {
+            if (stopInterval) {
+                clearInterval(stopInterval);
+                stopInterval = null;
+            }
+        }
+
+        // Command management
+        function updateState() {
+            // Send drive command
+            if (driveState !== 'stop') {
+                sendCommand(driveState);
+            }
+            
+            // Send steer command
+            if (steerState !== 'center') {
+                sendCommand(steerState);
+            }
+            
+            // If both are neutral, send stop
+            if (driveState === 'stop' && steerState === 'center') {
+                sendCommand('stop');
+            }
+        }
+
+        // Button handlers
+        function setupButton(btn, pressState, releaseState, stateType) {
+            const press = () => {
+                btn.classList.add('active');
+                if (stateType === 'drive') {
+                    driveState = pressState;
+                } else {
+                    steerState = pressState;
+                }
+                updateState();
+            };
+
+            const release = () => {
+                btn.classList.remove('active');
+                if (stateType === 'drive') {
+                    driveState = releaseState;
+                } else {
+                    steerState = releaseState;
+                }
+                updateState();
+            };
+
+            // Touch events
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                press();
+            });
+
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                release();
+            });
+
+            btn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                release();
+            });
+
+            // Mouse events (for testing on desktop)
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        }
+
+        // Setup all buttons
+        setupButton(forwardBtn, 'forward', 'stop', 'drive');
+        setupButton(reverseBtn, 'reverse', 'stop', 'drive');
+        setupButton(leftBtn, 'left', 'center', 'steer');
+        setupButton(rightBtn, 'right', 'center', 'steer');
+
+        // Connect button
+        connectBtn.addEventListener('click', () => {
+            if (bleCharacteristic) {
+                disconnectBLE();
+            } else {
+                connectBLE();
+            }
+        });
+
+        // Debug display
+        function updateDebug(msg) {
+            debug.textContent = `State: ${driveState} + ${steerState} | ${msg}`;
+        }
+
+        updateDebug('Ready');
+    </script>
+</body>
+</html>
